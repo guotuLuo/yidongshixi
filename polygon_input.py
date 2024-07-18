@@ -44,14 +44,14 @@ randomPoints = getPointsInChina()
 for point in randomPoints:
     if polygon.contains(point):
         print(point)
-        loc = reverse_geocode(point.y, point.x)
+        loc = reverse_geocode(point.x, point.y)
         new_x, new_y = point.x, point.y
         ax.plot(new_x, new_y, 'o', color='blue', label='New Points')
         ax.text(new_x, new_y, str(loc[0]), fontsize=14, color='black', ha='left', va='bottom')
     else:
         print(point)
         print("failed, dont have the point")
-        print(reverse_geocode(point.y, point.x))
+        print(reverse_geocode(point.x, point.y))
 
 ax.set_title("以杭州为中心，半径700KM作六边形")
 plt.show()

@@ -24,12 +24,12 @@ def generate_random_points_within_polygon(polygon, num_points):
     return points
 
 
-def reverse_geocode(lat, lon):
+def reverse_geocode(longotude, latitude):
     cursor.execute('''
         SELECT city, province FROM final_geo
         ORDER BY ((latitude - %s)*(latitude - %s) + (longitude - %s)*(longitude - %s)) ASC
         LIMIT 1
-    ''', (lat, lat, lon, lon))
+    ''', (latitude, latitude, longotude, longotude))
     return cursor.fetchone()
 
 def getPointsInChina():
