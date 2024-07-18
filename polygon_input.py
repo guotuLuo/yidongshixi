@@ -1,3 +1,5 @@
+import time
+
 from shapely.geometry import Polygon, Point
 from shapely.ops import triangulate
 import matplotlib.pyplot as plt
@@ -5,6 +7,7 @@ from matplotlib.patches import Polygon as MplPolygon
 import numpy as np
 from generator_devices_latitude_longitude import *
 from pylab import mpl
+import pandas as pd
 # 设置显示中文字体
 mpl.rcParams["font.sans-serif"] = ["SimHei"]
 
@@ -40,8 +43,11 @@ ax.plot(x, y, 'o', color='yellow')
 text_x, text_y = 120.226901, 30.308497
 ax.text(text_x, text_y, '杭州', fontsize=20, color='black', ha='left', va='bottom')
 
-randomPoints = getPointsInChina()
-for point in randomPoints:
+
+randomPoints = getPointsInChina(3000000)
+# 把生成的id、 longitude、 latitude 、 geocode存入能够快速读写的文件中
+data = []
+for i, point in enumerate(randomPoints):
     if polygon.contains(point):
         print(point)
         loc = reverse_geocode(point.x, point.y)
@@ -55,3 +61,6 @@ for point in randomPoints:
 
 ax.set_title("以杭州为中心，半径700KM作六边形")
 plt.show()
+
+
+

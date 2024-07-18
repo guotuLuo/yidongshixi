@@ -24,21 +24,23 @@ def generate_random_points_within_polygon(polygon, num_points):
     return points
 
 
+# TODO 获取距离给定经纬度最近的城市名、省名、行政区划号 但是这样不一定准， 边界附近的某个地点的经纬度可能出问题
+
 def reverse_geocode(longotude, latitude):
     cursor.execute('''
-        SELECT city, province FROM final_geo
+        SELECT city, province,geocode  FROM final_geo
         ORDER BY ((latitude - %s)*(latitude - %s) + (longitude - %s)*(longitude - %s)) ASC
         LIMIT 1
     ''', (latitude, latitude, longotude, longotude))
     return cursor.fetchone()
 
-def getPointsInChina():
+def getPointsInChina(num_points):
     # 下载和加载中国边界数据（这里假设你已经下载了中国的GeoJSON边界文件）
     china_gdf = gpd.read_file("country/gadm41_CHN_1.json")
     # 合并所有几何形状到一个多边形
     china_polygon = china_gdf.unary_union
     # 生成30个中国边界内的随机点
-    random_points = generate_random_points_within_polygon(china_polygon, 50)
+    random_points = generate_random_points_within_polygon(china_polygon, num_points)
     # 转换为WGS84坐标
    #  wgs84_points = [(point.x, point.y) for point in random_points]
     return random_points
@@ -53,6 +55,6 @@ if __name__ == "__main__":
         print(f"Point {i+1}: {point}")
     # # 示例WGS84坐标
     for coord in coordinates:
-        location = reverse_geocode(coord[1], coord[0])
+        location = reverse_geocode(coord[0], coord[1])
         print(f"Coordinates: {coord} -> Location: {location}")
 
