@@ -46,6 +46,8 @@ ax.text(text_x, text_y, '杭州', fontsize=20, color='black', ha='left', va='bot
 
 randomPoints = getPointsInChina(3000000)
 # 把生成的id、 longitude、 latitude 、 geocode存入能够快速读写的文件中
+
+
 data = []
 for i, point in enumerate(randomPoints):
     if polygon.contains(point):

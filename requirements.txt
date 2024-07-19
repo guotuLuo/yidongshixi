@@ -1,0 +1,1 @@
+pip install shapely pylab matplotlib json pandas rtree numpy
