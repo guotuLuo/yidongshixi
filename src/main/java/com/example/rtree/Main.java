@@ -1,4 +1,5 @@
 package com.example.rtree;
+
 import com.example.entity.Device;
 import com.github.davidmoten.guavamini.Lists;
 import com.github.davidmoten.rtree.RTree;
@@ -6,9 +7,8 @@ import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Point;
 import org.locationtech.jts.geom.*;
 import rx.Observable;
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+
+import java.io.*;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -28,7 +28,7 @@ public class Main {
                 String deviceId = values[0];
                 double longitude = Double.parseDouble(values[1]);
                 double latitude = Double.parseDouble(values[2]);
-                String geocode = values[2];
+                String geocode = values[3];
                 info.add(new Device(deviceId, latitude, longitude, geocode));
             }
         }
@@ -120,7 +120,14 @@ public class Main {
 
         List<Device> devicesInPolygon = queryRTreePolygon(rtree, polygon, 16);
         long end = System.currentTimeMillis();
-        System.out.println("Query time: " + (end - buildTreeTime) + "ms");
+
+        devicesInPolygon = queryRTreePolygon(rtree, polygon, 16);
+        long end1 = System.currentTimeMillis();
+        System.out.println("Query time: " + (end1 - end) + "ms");
+        devicesInPolygon = queryRTreePolygon(rtree, polygon, 16);
+        long end2 = System.currentTimeMillis();
+
+        System.out.println("Query time: " + (end2 - end1) + "ms");
         System.out.println("Found " + devicesInPolygon.size() + " devices within the polygon.");
 //        for (Device device : devicesInPolygon) {
 //            System.out.println("Device ID: " + device.deviceId);
