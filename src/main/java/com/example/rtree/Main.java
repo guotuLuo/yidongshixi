@@ -1,80 +1,106 @@
 package com.example.rtree;
 
 import com.example.entity.Device;
-import com.github.davidmoten.guavamini.Lists;
 import com.github.davidmoten.rtree.RTree;
-import com.github.davidmoten.rtree.geometry.Geometries;
 import com.github.davidmoten.rtree.geometry.Point;
 import org.locationtech.jts.geom.*;
-import rx.Observable;
 
-import java.io.*;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+
+import static com.example.utils.CreateRTree.createRTree;
+import static com.example.utils.LoadData.loadInfoData;
+import static com.example.utils.QueryRTree.queryRTreePolygon;
 
 public class Main {
 
     // 读取 CSV 文件中的数据
-    public static List<Device> loadInfoData(String filePath, int numRecords) throws IOException {
-        List<Device> info = Lists.newArrayList();
-        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
-            String line = br.readLine();
-            int id = 0;
-            while ((line = br.readLine()) != null && id < numRecords) {
-                String[] values = line.split(",");
-                String deviceId = values[0];
-                double longitude = Double.parseDouble(values[1]);
-                double latitude = Double.parseDouble(values[2]);
-                String geocode = values[3];
-                info.add(new Device(deviceId, latitude, longitude, geocode));
-            }
-        }
-        return info;
-    }
+
 
     // 创建 R 树索引
-    public static RTree<Device, Point> createRTree(List<Device> info) {
-        RTree<Device, Point> rtree = RTree.create();
-        for (Device device : info) {
-            rtree = rtree.add(device, Geometries.pointGeographic(device.longitude, device.latitude));
-        }
-        return rtree;
-    }
+
 
     // 查询在多边形范围内的设备
-    public static List<Device> queryRTreePolygon(RTree<Device, Point> rtree, Polygon polygon, int maxWorkers) throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(maxWorkers);
+//    public static List<Device> queryRTreePolygon(RTree<Device, Point> rtree, Polygon polygon, int maxWorkers) throws Exception {
+//        ExecutorService executor = Executors.newFixedThreadPool(maxWorkers);
+//
+//        // Step 1: 粗筛选 - 根据最小外接矩形查找
+//        Envelope envelope = polygon.getEnvelopeInternal();
+//        Observable<Device> observable = rtree.search(Geometries.rectangle(envelope.getMinX(), envelope.getMinY(), envelope.getMaxX(), envelope.getMaxY()))
+//                .map(entry -> entry.value());
+//
+//        // Step 2: 精细过滤 - 确定点是否在多边形内部
+//        List<Callable<Device>> tasks = Lists.newArrayList();
+//        observable.forEach(entry -> tasks.add(() -> {
+//            if (polygon.covers(new GeometryFactory().createPoint(new Coordinate(entry.longitude, entry.latitude)))) {
+//                return entry;
+//            }
+//            return null;
+//        }));
+//
+//        // 收集结果
+//        List<Device> result = Lists.newArrayList();
+//        List <Future<Device>> futures = executor.invokeAll(tasks);
+//        for (Future<Device> future : futures) {
+//            Device device = future.get();
+//            if (device != null) {
+//                result.add(device);
+//            }
+//        }
+//
+//        executor.shutdown();
+//        return result;
+//    }
 
-        // Step 1: 粗筛选 - 根据最小外接矩形查找
-        Envelope envelope = polygon.getEnvelopeInternal();
-        Observable<Device> observable = rtree.search(Geometries.rectangle(envelope.getMinX(), envelope.getMinY(), envelope.getMaxX(), envelope.getMaxY()))
-                .map(entry -> entry.value());
+//    public static List<Device> queryRTreePolygon(RTree<Device, Point> rtree, Polygon polygon, int maxWorkers) throws Exception {
+//        ExecutorService executor = Executors.newFixedThreadPool(maxWorkers);
+//
+//        // 使用GeometryFactory缓存，避免重复创建
+//        GeometryFactory geometryFactory = new GeometryFactory();
+//
+//        // Step 1: 粗筛选 - 根据最小外接矩形查找
+//        Envelope envelope = polygon.getEnvelopeInternal();
+//        Observable<Device> observable = rtree.search(Geometries.rectangle(envelope.getMinX(), envelope.getMinY(), envelope.getMaxX(), envelope.getMaxY()))
+//                .map(entry -> entry.value());
+//
+//        // Step 2: 精细过滤 - 确定点是否在多边形内部
+//        List<Device> result = new ArrayList<>();
+//        List<Callable<Device>> tasks = observable.map(device -> (Callable<Device>) () -> {
+//            if (polygon.covers(geometryFactory.createPoint(new Coordinate(device.longitude, device.latitude)))) {
+//                return device;
+//            }
+//            return null;
+//        }).toList().toBlocking().single();
+//
+//        // 收集结果
+//        List<Future<Device>> futures = executor.invokeAll(tasks);
+//        for (Future<Device> future : futures) {
+//            Device device = future.get();
+//            if (device != null) {
+//                result.add(device);
+//            }
+//        }
+//
+//        executor.shutdown();
+//        return result;
+//    }
 
-        // Step 2: 精细过滤 - 确定点是否在多边形内部
-        List<Callable<Device>> tasks = Lists.newArrayList();
-        observable.forEach(entry -> tasks.add(() -> {
-            if (polygon.covers(new GeometryFactory().createPoint(new Coordinate(entry.longitude, entry.latitude)))) {
-                return entry;
-            }
-            return null;
-        }));
 
-        // 收集结果
-        List<Device> result = Lists.newArrayList();
-        List<Future<Device>> futures = executor.invokeAll(tasks);
-        for (Future<Device> future : futures) {
-            Device device = future.get();
-            if (device != null) {
-                result.add(device);
-            }
-        }
+    // 惰性求值  最垃圾的
+//    public static List<Device> queryRTreePolygon(RTree<Device, Point> rtree, Polygon polygon, int maxWorkers) throws Exception {
+//        // 使用GeometryFactory缓存，避免重复创建
+//        GeometryFactory geometryFactory = new GeometryFactory();
+//
+//        // Step 1: 粗筛选 - 根据最小外接矩形查找
+//        Envelope envelope = polygon.getEnvelopeInternal();
+//        Observable<Device> observable = rtree.search(Geometries.rectangle(envelope.getMinX(), envelope.getMinY(), envelope.getMaxX(), envelope.getMaxY()))
+//                .map(entry -> entry.value())
+//                .filter(device -> polygon.covers(geometryFactory.createPoint(new Coordinate(device.longitude, device.latitude))));
+//
+//        // Step 2: 并行执行并收集结果
+//        List<Device> result = observable.toList().toBlocking().single();
+//        return result;
+//    }
 
-        executor.shutdown();
-        return result;
-    }
 
     // 主程序
     public static void main(String[] args) throws Exception {
@@ -104,7 +130,7 @@ public class Main {
                 new Coordinate(116.586489, 34.230691),
                 new Coordinate(112.807192, 39.635978),
                 new Coordinate(112.807192, 39.635978),
-                new Coordinate(101.381411, 34.19435),
+                new Coordinate(101.381411, 34.194350),
                 new Coordinate(105.160707, 28.725077)
         };
 
@@ -124,17 +150,11 @@ public class Main {
         devicesInPolygon = queryRTreePolygon(rtree, polygon, 16);
         long end1 = System.currentTimeMillis();
         System.out.println("Query time: " + (end1 - end) + "ms");
-        devicesInPolygon = queryRTreePolygon(rtree, polygon, 16);
-        long end2 = System.currentTimeMillis();
-
-        System.out.println("Query time: " + (end2 - end1) + "ms");
         System.out.println("Found " + devicesInPolygon.size() + " devices within the polygon.");
-//        for (Device device : devicesInPolygon) {
-//            System.out.println("Device ID: " + device.deviceId);
-//        }
     }
 }
 
 // 考虑当前传入多边形和那些省的边界相交，利用当前相交的边界重新查询建树，那么
 // 34 个省内的geocode分别建树， 共有34个树多线程查询
 // 先查出有那些省是有可能的，然后在这些省内的R树内部进行查询
+// 后面这些咋整呢
