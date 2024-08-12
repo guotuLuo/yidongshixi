@@ -7,6 +7,9 @@ import org.locationtech.jts.operation.union.CascadedPolygonUnion;
 import org.locationtech.jts.geom.util.PolygonExtracter;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -19,11 +22,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+@Component
 public class PolygonCircleUnion {
-    public static List<Polygon> getUnionPolygon(String polygonData, String circleData) {
+    @Autowired
+    private CirclePolygon CirclePolygon;
+    public List<Polygon> getUnionPolygon(String polygonData, String circleData) {
         List<Polygon> unionPolygons = null;
         try {
             // 解析polygon坐标
+            long start = System.currentTimeMillis();
             String[] polygonPoints = polygonData.split(" ");
             Coordinate[] polygonCoordinates = new Coordinate[polygonPoints.length];
             for (int i = 0; i < polygonPoints.length; i++) {
@@ -41,7 +48,6 @@ public class PolygonCircleUnion {
 
             // 创建GeometryFactory
             GeometryFactory geometryFactory = new GeometryFactory();
-            GeometryBuilder geometryBuilder = new GeometryBuilder();
             // 创建polygon对象
             Polygon polygon = geometryFactory.createPolygon(polygonCoordinates);
 
@@ -69,9 +75,7 @@ public class PolygonCircleUnion {
             circleLat = Double.parseDouble(df.format(circleLat));
             circleLon = Double.parseDouble(df.format(circleLon));
 
-
             Polygon circlePolygon = CirclePolygon.getCirclePolygon(circleLat, circleLon, radius);
-
             // 计算polygon和circle的并集
             Geometry unionGeometry = polygon.union(circlePolygon);
 

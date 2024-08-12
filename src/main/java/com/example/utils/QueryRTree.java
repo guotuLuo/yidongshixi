@@ -18,20 +18,27 @@ public class QueryRTree {
     public static List<Device> queryRTreePolygon(RTree<Device, Point> rtree, Polygon polygon, int maxWorkers) throws Exception {
         // 使用GeometryFactory缓存，避免重复创建
         GeometryFactory geometryFactory = new GeometryFactory();
-
         // Step 1: 粗筛选 - 根据最小外接矩形查找
         Envelope envelope = polygon.getEnvelopeInternal();
         Observable<Entry<Device, Point>> observable = rtree.search(Geometries.rectangle(envelope.getMinX(), envelope.getMinY(), envelope.getMaxX(), envelope.getMaxY()));
+
 
         // Step 2: 并行处理和过滤
         List<Device> result = observable.toList()
                 .toBlocking()
                 .single()
                 .parallelStream()  // 使用并行流
-                .map(entry -> entry.value())
-                .filter(device -> polygon.covers(geometryFactory.createPoint(new Coordinate(device.longitude, device.latitude))))
-                .collect(Collectors.toList());
-
+                .map(Entry::value)
+                .filter(device -> {
+                    Coordinate coord = new Coordinate(device.longitude, device.latitude);
+                    // 先进行简单的边界框检查
+                    if (!envelope.contains(coord)) {
+                        return false;
+                    }
+                    // 再进行精确的多边形覆盖检查
+                    return polygon.covers(geometryFactory.createPoint(coord));
+                })
+                .toList();
         return result;
     }
 }

@@ -117,7 +117,7 @@ public class Main {
 //        Coordinate[] coordinates = new Coordinate[]{
 //                new Coordinate(112.941677, 30.247739),
 //                new Coordinate(116.582514, 35.693445),
-//                new Coordinate(123.86412, 35.69343),
+//                new Coordinate(123.86412,  35.693430),
 //                new Coordinate(127.504904, 30.247693),
 //                new Coordinate(123.864103, 24.801945),
 //                new Coordinate(116.582511, 24.801968),
