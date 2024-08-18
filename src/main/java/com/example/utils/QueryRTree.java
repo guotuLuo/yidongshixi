@@ -36,7 +36,7 @@ public class QueryRTree {
                         return false;
                     }
                     // 再进行精确的多边形覆盖检查
-                    return polygon.covers(geometryFactory.createPoint(coord));
+                    return polygon.contains(geometryFactory.createPoint(coord));
                 })
                 .toList();
         return result;

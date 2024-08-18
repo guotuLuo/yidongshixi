@@ -1,80 +1,57 @@
 package com.example;
 import com.example.configuration.Config;
-import com.example.utils.ChinaMapPlotter;
-import com.example.utils.FlipImage;
 import com.example.utils.PolygonCircleUnion;
 import com.example.utils.XMLParser;
-import org.locationtech.jts.geom.Polygon;
-import org.springframework.beans.factory.annotation.Autowired;
-import com.example.entity.Device;
 import com.github.davidmoten.rtree.RTree;
 import com.github.davidmoten.rtree.geometry.Point;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.locationtech.jts.geom.Polygon;
+import org.openjdk.jmh.annotations.*;
 
-import javax.swing.*;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static com.example.utils.CSVComparator.compareCSVFiles;
-import static com.example.utils.CSVWriter.writeDevicesToCSV;
+import com.example.entity.Device;
+
 import static com.example.utils.CreateRTree.createRTree;
 import static com.example.utils.LoadData.loadInfoData;
 import static com.example.utils.QueryRTree.queryRTreePolygon;
 
-
-
-
-
-@SpringBootApplication
-public class StartApplication {
-    // geocode 对应的区域是杭州市、宁波市、绍兴市、嘉兴市、湖州市 1/960 * 1000000 = 1300+
-    // polygon 对应的区域是以西安为中心的径长700km的正六边形  -- S = 3 * 1.73 / 2 * 700 ^ 2  / 9600000 * 1000000 = 130000+
-    // circle  对应的区域是以北京市中心为中心的半径100km的圆 9000+
-    private String xmlData1 =
-            "<area>"
-            + "<areaDesc>西安市、宁波市、绍兴市、嘉兴市、湖州市、北京市</areaDesc>"
-            + "<polygon>"
-                    + "28.725077,105.160707 28.879113,112.719301 34.230691,116.586489 "
-                    + "39.635978,112.807192 39.853848,105.159922 34.194350,101.381411 28.725077,105.160707"
-            + "</polygon>"
+@BenchmarkMode(Mode.AverageTime)
+@State(Scope.Thread)
+@Fork(1)
+@OutputTimeUnit(TimeUnit.MILLISECONDS)
+@Warmup(iterations = 3)
+@Measurement(iterations = 5)
+public class ConcurrentTest {
+    private static List<String> list;
+    private static String xmlData1 = "<area>"
+            + "<polygon>28.725077,105.160707 28.879113,112.719301 34.230691,116.586489 39.635978,112.807192 39.853848,105.159922 34.194350,101.381411 28.725077,105.160707</polygon>"
             + "<circle>39.85799384124283,116.40441202579439 100000</circle>"
             + "<geocode>610100000000,330200000000,330600000000</geocode>"
             + "<geocode>330400000000,330500000000,110100000000</geocode>"
             + "</area>";
 
-    private String xmlData2 = "<area>"
-            + "<areaDesc>浙江省嘉兴市、湖州市</areaDesc>"
+    private static String xmlData2 = "<area>"
             + "<polygon>28.725077,105.160707 28.879113,112.719301 34.230691,116.586489 39.635978,112.807192 39.853848,105.159922 34.194350,101.381411 28.725077,105.160707</polygon>"
             + "<circle>30.85799384124283,112.40441202579439 100000</circle>"
             + "<geocode>330200000000,330600000000</geocode>"
             + "</area>";
 
 
-    private String xmlData3 =
-            "<area>"
-            + "<areaDesc>北京市、西安市</areaDesc>"
-            + "<polygon>"
-                    + "30.247739,112.941677 35.693445,116.582514 35.693430,123.86412 30.247693,127.504904 "
-                    + "24.801945,123.864103 24.801968,116.582511 30.247739,112.941677"
-            + "</polygon>"
+    private static String xmlData3 = "<area>"
+            + "<polygon>30.247739,112.941677 35.693445,116.582514 35.693430,123.86412 30.247693,127.504904 24.801945,123.864103 24.801968,116.582511 30.247739,112.941677</polygon>"
             + "<circle>39.85799384124283,116.40441202579439 100000</circle>"
             + "<geocode>610100000000,110100000000</geocode>"
             + "</area>";
-
-
-    // 坐标系转换这里是比较花费时长的
-    @Autowired
-    private PolygonCircleUnion PolygonCircleUnion;
-    // rtree 缓存
-    private static RTree<Device, Point> rtree;
-    // 设备信息缓存
     private static List<Device> info;
 
+    private  static PolygonCircleUnion polygonCircleUnion = new PolygonCircleUnion();
+    // rtree 缓存
+    private static RTree<Device, Point> rtree;
     public void Build() throws Exception {
         // 加载设备信息
         info = loadInfoData("src/main/resources/device_info.csv", 1200000);
@@ -96,7 +73,7 @@ public class StartApplication {
         long start = System.currentTimeMillis();
         Map<String, String> map = XMLParser.ParsertoNodeList(xmlData);
         // 根据传入的圆形和多边形构建并集
-        List<Polygon> list = PolygonCircleUnion.getUnionPolygon(map.get("polygon"), map.get("circle"));
+        List<Polygon> list = polygonCircleUnion.getUnionPolygon(map.get("polygon"), map.get("circle"));
         Set<String> targetGeocodes = Arrays.stream(map.get("geocode").split(",")).collect(Collectors.toSet());
         // 根据当前多边形并集，搜索所有设备
         long temp = System.currentTimeMillis();
@@ -117,7 +94,7 @@ public class StartApplication {
         long end = System.currentTimeMillis();
         // 误差 （1444332 - 143337） / 144332 = 995 / 144332 = 0.006
         System.out.println("Find " + resultSet.size() + " devices in the given area");
-        System.out.println("All Query time: " + (end - start) + "ms");
+//        System.err.println("All Query time: " + (end - start) + "ms");
         try (FileWriter writer = new FileWriter("C:/Users/guotuluo/Desktop/Set/moveBrick/RTree/src/main/resources/output.txt", true)) {
             writer.write("QueryRTree execution time: " + (end - start) + "ms\n");
         } catch (IOException e) {
@@ -126,36 +103,23 @@ public class StartApplication {
         return resultSet;
     }
 
-
-    public static void main(String[] args) throws Exception {
-        // 创建ApplicationContext
-        ApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
-        // 获取StartApplication的Bean实例
-        StartApplication app = context.getBean(StartApplication.class);
-
-        //TODO 建树
-        app.Build();
-        List<String> list = new ArrayList<>();
-
-        list.add(app.xmlData1);
-//        list.add(app.xmlData2);
-//        list.add(app.xmlData3);
-
-        for (int i = 0; i < 10; i++) {
-            Set<Device> devices0 = app.QueryRTree(list.get(0));
-        }
-
-
-//      writeDevicesToCSV(devices, "src/main/resources/device_info" + i + ".csv");
-
-        // 以pgsql为baseling 测试准确率
-//        compareCSVFiles("src/main/resources/device_info0.csv", "src/main/resources/device_sql.csv");
-//
-//        JFrame frame = new JFrame();
-//        ChinaMapPlotter mapPlotter = new ChinaMapPlotter(devices0);
-//        frame.add(mapPlotter);
-//        frame.setSize(800, 600);
-//        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-//        frame.setVisible(true);
+    @Setup(Level.Trial)
+    public  void setUp() throws Exception {
+        // TODO: 建树
+        Build();
+        list = new ArrayList<>();
+        list.add(xmlData1);
+        list.add(xmlData2);
+        list.add(xmlData3);
     }
+    private static int count = 0;
+
+    @Benchmark
+    public  Set<Device> testQueryRTree() throws Exception {
+        // 执行查询
+        count = (count + 1) % 3;
+        Set<Device> devices = QueryRTree(list.get(count));
+        return devices;
+    }
+
 }

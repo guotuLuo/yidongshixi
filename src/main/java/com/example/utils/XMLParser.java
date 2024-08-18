@@ -30,7 +30,7 @@ public class XMLParser {
             DocumentBuilder builder = factory.newDocumentBuilder();
 
             // 解析XML字符串
-            Document doc = builder.parse(new java.io.ByteArrayInputStream(xmlData.getBytes()));
+            Document doc = builder.parse(new java.io.ByteArrayInputStream(xmlData.getBytes(StandardCharsets.UTF_8)));
 
             // 创建XPath对象
             XPathFactory xPathFactory = XPathFactory.newInstance();

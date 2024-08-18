@@ -18,8 +18,10 @@ public class LoadData {
             while ((line = br.readLine()) != null && id < numRecords) {
                 String[] values = line.split(",");
                 String deviceId = values[0];
-                double longitude = Double.parseDouble(values[1]);
-                double latitude = Double.parseDouble(values[2]);
+//                double longitude = Double.parseDouble(values[1]);
+//                double latitude = Double.parseDouble(values[2]);
+                float longitude = Float.parseFloat(values[1]);
+                float latitude = Float.parseFloat(values[2]);
                 BigDecimal bd = new BigDecimal(values[3]);
                 String geocode = bd.toPlainString(); // 转换为字符串格式
                 info.add(new Device(deviceId, latitude, longitude, geocode));

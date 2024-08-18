@@ -14,9 +14,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import com.example.entity.Device;
 import com.github.davidmoten.rtree.RTree;
 import com.github.davidmoten.rtree.geometry.Point;
-import org.springframework.context.support.SimpleThreadScope;
-import org.geotools.referencing.CRS;
+import org.openjdk.jmh.annotations.*;
 
+import java.util.concurrent.TimeUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -47,84 +47,88 @@ class RTreeApplicationTests {
     private static RTree<Device, Point> rtree;
     // 设备信息缓存
     private static List<Device> info;
-    @Test
-    void BuildRTree() throws Exception {
-        // 加载设备信息
-        info = loadInfoData("src/main/resources/device_info.csv", 3000000);
-//        long init = System.currentTimeMillis();
-        // 创建 R 树并插入数据 建树
-        rtree = createRTree(info);
-//        long buildTreeTime = System.currentTimeMillis();
-//        System.out.println("Build R Tree time: " + (buildTreeTime - init) + "ms");
-    }
+//    @Test
+//    void BuildRTree() throws Exception {
+//        // 加载设备信息
+//        info = loadInfoData("src/main/resources/device_info.csv", 3000000);
+////        long init = System.currentTimeMillis();
+//        // 创建 R 树并插入数据 建树
+//        rtree = createRTree(info);
+////        long buildTreeTime = System.currentTimeMillis();
+////        System.out.println("Build R Tree time: " + (buildTreeTime - init) + "ms");
+//    }
 
-    @Test
-    void QueryRTree(String xmlData) throws Exception{
-        List<Device> devicesInPolygon = new ArrayList<>();
-        // 传入数据，开始运行程序
-        long start = System.currentTimeMillis();
-        Map<String, String> map = XMLParser.ParsertoNodeList(xmlData);
-        // 根据传入的圆形和多边形构建并集
-        List<Polygon> list = PolygonCircleUnion.getUnionPolygon(map.get("polygon"), map.get("circle"));
-        Set<String> targetGeocodes = Arrays.stream(map.get("geocode").split(",")).collect(Collectors.toSet());
-        // 根据当前多边形并集，搜索所有设备
-//        long temp = System.currentTimeMillis();
-//        System.out.println("Get the Union Area:" + (temp - start) + "ms");
-        for (Polygon polygon : list) {
-//            long end1 = System.currentTimeMillis();
-            devicesInPolygon.addAll(queryRTreePolygon(rtree, polygon, 12));
-//            long end2 = System.currentTimeMillis();
-//            System.out.println("Query time: " + (end2 - end1) + "ms");
-            System.out.println("Find " + devicesInPolygon.size() + " devices within the UnionPolygon.");
-        }
+//    @Test
+//    void QueryRTree(String xmlData) throws Exception{
+//        List<Device> devicesInPolygon = new ArrayList<>();
+//        // 传入数据，开始运行程序
+//        long start = System.currentTimeMillis();
+//        Map<String, String> map = XMLParser.ParsertoNodeList(xmlData);
+//        // 根据传入的圆形和多边形构建并集
+//        List<Polygon> list = PolygonCircleUnion.getUnionPolygon(map.get("polygon"), map.get("circle"));
+//        Set<String> targetGeocodes = Arrays.stream(map.get("geocode").split(",")).collect(Collectors.toSet());
+//        // 根据当前多边形并集，搜索所有设备
+////        long temp = System.currentTimeMillis();
+////        System.out.println("Get the Union Area:" + (temp - start) + "ms");
+//        for (Polygon polygon : list) {
+////            long end1 = System.currentTimeMillis();
+//            devicesInPolygon.addAll(queryRTreePolygon(rtree, polygon, 12));
+////            long end2 = System.currentTimeMillis();
+////            System.out.println("Query time: " + (end2 - end1) + "ms");
+//            System.out.println("Find " + devicesInPolygon.size() + " devices within the UnionPolygon.");
+//        }
+//
+//        // 传入geocode列表 #TODO geocode作为外置条件搜索
+//        List<Device> filteredDevices = info.stream()
+//                .filter(device -> targetGeocodes.contains(device.getGeocode()))
+//                .toList();
+//
+//        // 将 filteredDevices 和 devicesInPolygon 合并，并集处理
+//        Set<Device> resultSet = Stream.concat(filteredDevices.stream(), devicesInPolygon.stream())
+//                .collect(Collectors.toSet());
+//
+//        long end = System.currentTimeMillis();
+//        // 误差 （1444332 - 143337） / 144332 = 995 / 144332 = 0.006
+//        System.out.println("Find " + resultSet.size() + " devices in the given area");
+//        System.out.println("All Query time: " + (end - start) + "ms");
+//    }
 
-        // 传入geocode列表 #TODO geocode作为外置条件搜索
-        List<Device> filteredDevices = info.stream()
-                .filter(device -> targetGeocodes.contains(device.getGeocode()))
-                .toList();
+//    @Test
+//    void TestRTree() throws Exception {
+//        //TODO 建树
+//        BuildRTree();
+//
+//        Scanner scanner = new Scanner(System.in);
+//        StringBuilder xmlData = new StringBuilder();
+//        String line;
+//
+//        System.out.println("请输入每组XML数据（输入为空行以结束每组输入，输入EOF或Ctrl+D结束所有输入）：");
+//
+//        // 读取每一行，直到遇到EOF或Ctrl+D
+//        while (scanner.hasNextLine()) {
+//            line = scanner.nextLine().trim();
+//
+//            // 如果输入为空行，表示一组XML结束
+//            if (line.isEmpty()) {
+//                if (!xmlData.isEmpty()) {
+//                    // 处理当前组的XML数据
+//                    QueryRTree(xmlData.toString());
+//                    // 清空StringBuilder，准备读取下一组
+//                    xmlData.setLength(0);
+//                }
+//            } else {
+//                // 否则继续读取当前组的数据
+//                xmlData.append(line).append("\n");
+//            }
+//        }
+//
+//        // 处理最后一组未添加的XML数据
+//        if (xmlData.length() > 0) {
+//            QueryRTree(xmlData.toString());
+//        }
+//    }
 
-        // 将 filteredDevices 和 devicesInPolygon 合并，并集处理
-        Set<Device> resultSet = Stream.concat(filteredDevices.stream(), devicesInPolygon.stream())
-                .collect(Collectors.toSet());
 
-        long end = System.currentTimeMillis();
-        // 误差 （1444332 - 143337） / 144332 = 995 / 144332 = 0.006
-        System.out.println("Find " + resultSet.size() + " devices in the given area");
-        System.out.println("All Query time: " + (end - start) + "ms");
-    }
 
-    @Test
-    void TestRTree() throws Exception {
-        //TODO 建树
-        BuildRTree();
 
-        Scanner scanner = new Scanner(System.in);
-        StringBuilder xmlData = new StringBuilder();
-        String line;
-
-        System.out.println("请输入每组XML数据（输入为空行以结束每组输入，输入EOF或Ctrl+D结束所有输入）：");
-
-        // 读取每一行，直到遇到EOF或Ctrl+D
-        while (scanner.hasNextLine()) {
-            line = scanner.nextLine().trim();
-
-            // 如果输入为空行，表示一组XML结束
-            if (line.isEmpty()) {
-                if (!xmlData.isEmpty()) {
-                    // 处理当前组的XML数据
-                    QueryRTree(xmlData.toString());
-                    // 清空StringBuilder，准备读取下一组
-                    xmlData.setLength(0);
-                }
-            } else {
-                // 否则继续读取当前组的数据
-                xmlData.append(line).append("\n");
-            }
-        }
-
-        // 处理最后一组未添加的XML数据
-        if (xmlData.length() > 0) {
-            QueryRTree(xmlData.toString());
-        }
-    }
 }
